@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/astronomy_background"
+    android:padding="16dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Title -->
+            <TextView
+                android:id="@+id/titleText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AstroGauge"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:layout_gravity="center"
+                android:paddingTop="20dp"
+                android:typeface="serif"
+                android:shadowColor="#555555"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="3" />
+
+            <!-- Quote -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="“If only we could replace every gun with a telescope.”"
+                android:textSize="18sp"
+                android:textColor="#FFD700"
+                android:layout_gravity="center"
+                android:paddingTop="10dp"
+                android:paddingBottom="15dp"
+                android:typeface="serif"
+                android:textStyle="italic"
+                android:shadowColor="#80000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="2"
+                android:layout_marginHorizontal="20dp"
+                android:gravity="center"/>
+
+            <!-- Environment Data Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:background="@drawable/white_border"
+                android:layout_marginTop="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Get Environment Data:"
+                    android:textSize="20sp"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:layout_gravity="center" />
+
+                <!-- Cloud Cover Button -->
+                <Button
+                    android:id="@+id/cloudCoverButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cloud Cover"
+                    android:layout_gravity="center"
+                    android:padding="10dp"
+                    android:layout_marginTop="10dp" />
+
+                <!-- Cloud Cover Result -->
+                <TextView
+                    android:id="@+id/cloudCoverResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cloud Cover in your Region: --%"
+                    android:textSize="18sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:paddingTop="10dp"
+                    android:visibility="gone" />
+
+                <!-- "Why?" Text -->
+                <TextView
+                    android:id="@+id/whyText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Why?"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:padding="8dp"
+                    android:minHeight="48dp"
+                    android:minWidth="48dp" />
+
+                <!-- Explanation Box -->
+                <TextView
+                    android:id="@+id/whyExplanation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cloud cover affects visibility in astrophotography. Less cloud cover means clearer skies."
+                    android:textSize="14sp"
+                    android:textColor="#006400"
+                    android:visibility="gone"
+                    android:padding="10dp"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/white_border"
+                    android:shadowColor="#FFFFFF"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"/>
+
+                <!-- Telescope Input Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Enter Telescope Lens Thickness (mm):"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:paddingTop="15dp" />
+
+                <EditText
+                    android:id="@+id/lensInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Enter lens thickness (mm)"
+                    android:inputType="numberDecimal"
+                    android:minHeight="48dp"
+                    android:padding="10dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/white_border"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#BBBBBB" />
+
+                <Button
+                    android:id="@+id/lensEnterButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Enter"
+                    android:layout_gravity="center"
+                    android:padding="10dp"
+                    android:layout_marginTop="10dp" />
+
+                <TextView
+                    android:id="@+id/lensResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your telescope lens thickness: -- mm"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:paddingTop="10dp"
+                    android:visibility="gone" />
+
+                <!-- "Why?" Text for Telescope -->
+                <TextView
+                    android:id="@+id/whyTelescopeText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Why?"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:padding="8dp"
+                    android:minHeight="48dp"
+                    android:minWidth="48dp" />
+
+                <!-- Telescope Explanation Box -->
+                <TextView
+                    android:id="@+id/whyTelescopeExplanation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Telescope lens thickness impacts light-gathering ability, affecting astrophotography clarity."
+                    android:textSize="14sp"
+                    android:textColor="#006400"
+                    android:visibility="gone"
+                    android:padding="10dp"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/white_border"
+                    android:shadowColor="#FFFFFF"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"/>
+
+                <!-- Temperature/Humidity Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Get Local Sensor Data:"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:paddingTop="15dp" />
+
+                <Button
+                    android:id="@+id/fetchTempHumidityButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Get Temp/Humidity"
+                    android:layout_gravity="center"
+                    android:padding="10dp"
+                    android:layout_marginTop="8dp" />
+
+                <TextView
+                    android:id="@+id/tempHumidityResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Temperature: --°C, Humidity: --%"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:paddingTop="10dp"
+                    android:visibility="gone" />
+
+                <!-- "Why?" Text for Temp/Humidity -->
+                <TextView
+                    android:id="@+id/whyTempHumidityText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Why?"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:padding="8dp"
+                    android:minHeight="48dp"
+                    android:minWidth="48dp" />
+
+                <!-- Temp/Humidity Explanation Box -->
+                <TextView
+                    android:id="@+id/whyTempHumidityExplanation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Temperature and humidity affect air stability and lens fogging, crucial for clear telescopic observations."
+                    android:textSize="14sp"
+                    android:textColor="#006400"
+                    android:visibility="gone"
+                    android:padding="10dp"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/white_border"
+                    android:shadowColor="#FFFFFF"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"/>
+
+                <!-- Light Sensor Section -->
+                <Button
+                    android:id="@+id/fetchLightButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Get Light Value"
+                    android:layout_gravity="center"
+                    android:padding="10dp"
+                    android:layout_marginTop="8dp" />
+
+                <TextView
+                    android:id="@+id/lightResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Light Value: --"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:paddingTop="10dp"
+                    android:visibility="gone" />
+
+                <!-- "Why?" Text for Light Sensor -->
+                <TextView
+                    android:id="@+id/whyLightText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Why?"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:padding="8dp"
+                    android:minHeight="48dp"
+                    android:minWidth="48dp" />
+
+                <!-- Light Sensor Explanation Box -->
+                <TextView
+                    android:id="@+id/whyLightExplanation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ambient light levels impact visibility of celestial objects and determine optimal exposure settings for astrophotography."
+                    android:textSize="14sp"
+                    android:textColor="#006400"
+                    android:visibility="gone"
+                    android:padding="10dp"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/white_border"
+                    android:shadowColor="#FFFFFF"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"/>
+
+                <!-- Calculate Score Section -->
+                <Button
+                    android:id="@+id/calculateScoreButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Calculate Observation Score"
+                    android:layout_gravity="center"
+                    android:padding="10dp"
+                    android:layout_marginTop="20dp"
+                    android:enabled="false" />
+
+                <TextView
+                    android:id="@+id/scoreResult"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Observation Score: --/10"
+                    android:textSize="18sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:paddingTop="10dp"
+                    android:visibility="gone" />
+
+                <!-- "Why?" Text for Score -->
+                <TextView
+                    android:id="@+id/whyScoreText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="How is this calculated?"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_gravity="center"
+                    android:padding="8dp"
+                    android:minHeight="48dp"
+                    android:minWidth="48dp" />
+
+                <!-- Score Explanation Box -->
+                <TextView
+                    android:id="@+id/whyScoreExplanation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Score considers cloud cover, telescope specs, temperature, humidity and light pollution. Each parameter is rated 1-4 (worst-best), converted to 10-point scale and averaged."
+                    android:textSize="14sp"
+                    android:textColor="#006400"
+                    android:visibility="gone"
+                    android:padding="10dp"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/white_border"
+                    android:shadowColor="#FFFFFF"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Footer -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingBottom="20dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Developed and maintained by"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:gravity="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Amaan Khan\nVinit Tarase\nMaaz Khan\nAzeem Patel"
+            android:textSize="14sp"
+            android:textColor="#FFD700"
+            android:gravity="center"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="at Rizvi College of Engineering"
+            android:textSize="14sp"
+            android:textColor="#1E90FF"
+            android:gravity="center" />
+    </LinearLayout>
+</LinearLayout>

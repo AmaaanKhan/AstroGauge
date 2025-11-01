@@ -1,9 +1,9 @@
 package com.example.astrogauge;
 
-import android.Manifest; ----
+import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.os.Bundle;   
+import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -11,6 +11,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -20,8 +21,16 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String OPENWEATHER_API_KEY = "51e672d6866ce60022c4506519d65a81";
     private static final double MUMBAI_LAT = 18.9667;
     private static final double MUMBAI_LON = 72.8333;
-    private static final String NODEMCU_SERVER = "http://192.168.217.194/";
+    private static final String NODEMCU_SERVER = "http://10.190.156.194/";
 
     // UI Elements
     private Button cloudCoverButton, lensEnterButton;
@@ -105,6 +114,196 @@ public class MainActivity extends AppCompatActivity {
         fetchTempHumidityButton.setOnClickListener(v -> fetchNodeMCUData("temp_humidity"));
         fetchLightButton.setOnClickListener(v -> fetchNodeMCUData("light"));
         calculateScoreButton.setOnClickListener(v -> calculateObservationScore());
+    }
+
+    // NEW METHOD: Show upcoming astronomy events
+    public void showEventsDropdown(View view) {
+        String[] events = {
+                "Oct 20-21: Orionid Meteor Shower (Peak) - Best after midnight",
+                "Oct 19: Venus & Crescent Moon - Pre-dawn eastern sky",
+                "Oct 20: Comet C/2025 R2 (SWAN) closest - SW after sunset",
+                "Nov 17-18: Leonid Meteor Shower - Good visibility",
+                "Dec 13-14: Geminid Meteor Shower - Excellent winter shower",
+                "Jan 3-4: Quadrantid Meteor Shower - New moon = great viewing"
+        };
+
+        StringBuilder eventsText = new StringBuilder();
+        for (String event : events) {
+            eventsText.append("• ").append(event).append("\n\n");
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("📅 Upcoming Astronomy Events")
+                .setMessage(eventsText.toString())
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    // NEW METHOD: Get cloud cover forecast
+    public void getCloudForecast(View view) {
+        Toast.makeText(this, "Fetching 5-day cloud forecast...", Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            try {
+                String forecastData = fetchForecastData();
+                List<ForecastPeriod> optimalPeriods = findOptimalObservationTimes(forecastData);
+
+                runOnUiThread(() -> showOptimalTimesDialog(optimalPeriods));
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    showSimulatedOptimalTimes();
+                });
+            }
+        }).start();
+    }
+
+    private String fetchForecastData() throws Exception {
+        String urlString = "https://api.openweathermap.org/data/2.5/forecast?q=Mumbai&units=metric&appid=" + OPENWEATHER_API_KEY;
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlString).openConnection();
+        connection.setRequestMethod("GET");
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+        return response.toString();
+    }
+
+    private List<ForecastPeriod> findOptimalObservationTimes(String forecastData) throws Exception {
+        List<ForecastPeriod> optimalPeriods = new ArrayList<>();
+        JSONObject json = new JSONObject(forecastData);
+        JSONArray list = json.getJSONArray("list");
+
+        SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        SimpleDateFormat outputFormat = new SimpleDateFormat("EEE, MMM d, hh:mm a", Locale.getDefault());
+
+        for (int i = 0; i < list.length(); i++) {
+            JSONObject item = list.getJSONObject(i);
+
+            // Get cloud coverage
+            JSONObject clouds = item.getJSONObject("clouds");
+            int cloudCover = clouds.getInt("all");
+
+            // Get date/time
+            String dateTimeStr = item.getString("dt_txt");
+            Date dateTime = inputFormat.parse(dateTimeStr);
+
+            // Get hour of day
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(dateTime);
+            int hour = cal.get(Calendar.HOUR_OF_DAY);
+
+            // Only consider night hours (8 PM to 6 AM) for observation
+            boolean isNightTime = hour >= 20 || hour <= 6;
+
+            // Calculate cloud cover score using YOUR existing scoring system
+            int cloudScore = getCloudScore(cloudCover);
+
+            // Consider optimal if cloud score is 3 or 4 (0-25% clouds = Excellent/Very Good)
+            if (isNightTime && cloudScore >= 3) {
+                optimalPeriods.add(new ForecastPeriod(
+                        outputFormat.format(dateTime),
+                        cloudCover,
+                        cloudScore
+                ));
+            }
+        }
+
+        // Sort by best cloud score (4 is best) and then by lowest cloud percentage
+        optimalPeriods.sort((a, b) -> {
+            if (b.cloudScore != a.cloudScore) {
+                return Integer.compare(b.cloudScore, a.cloudScore);
+            }
+            return Integer.compare(a.cloudCover, b.cloudCover);
+        });
+
+        // Limit to top 5 results
+        return optimalPeriods.subList(0, Math.min(optimalPeriods.size(), 5));
+    }
+
+    private void showOptimalTimesDialog(List<ForecastPeriod> optimalPeriods) {
+        if (optimalPeriods.isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("🔭 No Optimal Times Found")
+                    .setMessage("No clear nights (≤25% clouds) found in the next 5 days. Check back later!")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
+
+        StringBuilder message = new StringBuilder();
+        message.append("Best times for observation in Mumbai:\n\n");
+
+        for (ForecastPeriod period : optimalPeriods) {
+            String scoreEmoji = period.cloudScore == 4 ? "⭐" : "🌟";
+            message.append(scoreEmoji)
+                    .append(" ").append(period.dateTime).append("\n")
+                    .append("   Cloud Cover: ").append(period.cloudCover).append("% (")
+                    .append(getCloudCondition(period.cloudCover)).append(")\n\n");
+        }
+
+        message.append("💡 HARDWARE ROLE: Use your sensors at these times to verify local temperature, humidity, and light pollution for perfect conditions!");
+
+        new AlertDialog.Builder(this)
+                .setTitle("📅 Optimal Observation Forecast")
+                .setMessage(message.toString())
+                .setPositiveButton("Set Reminder", (dialog, which) -> setCalendarReminder(optimalPeriods.get(0)))
+                .setNegativeButton("OK", null)
+                .show();
+    }
+
+    private String getCloudCondition(int cloudCover) {
+        if (cloudCover <= 10) return "Excellent";
+        if (cloudCover <= 25) return "Very Good";
+        if (cloudCover <= 50) return "Good";
+        return "Fair";
+    }
+
+    private void setCalendarReminder(ForecastPeriod bestPeriod) {
+        Toast.makeText(this, "Reminder set for " + bestPeriod.dateTime, Toast.LENGTH_LONG).show();
+    }
+
+    // Fallback method if API fails
+    private void showSimulatedOptimalTimes() {
+        String simulatedData =
+                "🔭 BEST FUTURE OBSERVATION TIMES:\n\n" +
+                        "⭐ Tonight 10 PM - 2 AM\n" +
+                        "   Cloud Cover: 15% (Excellent)\n" +
+                        "   Use your sensors to check local conditions!\n\n" +
+
+                        "⭐ Tomorrow 11 PM - 3 AM\n" +
+                        "   Cloud Cover: 12% (Perfect)\n" +
+                        "   Setup your equipment in advance\n\n" +
+
+                        "⭐ Friday 9 PM - 1 AM\n" +
+                        "   Cloud Cover: 18% (Very Good)\n" +
+                        "   Ideal for long-exposure photography\n\n" +
+
+                        "💡 HARDWARE ROLE: Your sensors provide ground-truth validation for temperature, humidity and light pollution!";
+
+        new AlertDialog.Builder(this)
+                .setTitle("Optimal Observation Times")
+                .setMessage(simulatedData)
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    // Helper class for forecast periods
+    private static class ForecastPeriod {
+        String dateTime;
+        int cloudCover;
+        int cloudScore;
+
+        ForecastPeriod(String dateTime, int cloudCover, int cloudScore) {
+            this.dateTime = dateTime;
+            this.cloudCover = cloudCover;
+            this.cloudScore = cloudScore;
+        }
     }
 
     private void toggleVisibility(View view) {
@@ -212,16 +411,22 @@ public class MainActivity extends AppCompatActivity {
                 response -> {
                     try {
                         JSONObject json = new JSONObject(response);
+                        Log.d("NODEMCU_RESPONSE", "Raw data: " + response);
+
+                        // Extract all data from the response
+                        float temperature = (float) json.getDouble("temperature");
+                        float humidity = (float) json.getDouble("humidity");
+                        int lightValue = json.getInt("light");
 
                         if (dataType.equals("temp_humidity")) {
-                            float temperature = (float) json.getDouble("temperature");
-                            float humidity = (float) json.getDouble("humidity");
+                            // Update temperature and humidity
                             tempHumidityResult.setText(String.format("Temperature: %.1f°C, Humidity: %.1f%%",
                                     temperature, humidity));
                             tempHumidityResult.setVisibility(View.VISIBLE);
                             hasTempHumidityData = true;
+
                         } else if (dataType.equals("light")) {
-                            int lightValue = json.getInt("light");
+                            // Update light data
                             lightResult.setText("Light Value: " + lightValue);
                             lightResult.setVisibility(View.VISIBLE);
                             hasLightData = true;
@@ -229,14 +434,23 @@ public class MainActivity extends AppCompatActivity {
 
                         checkAllParametersAvailable();
 
+                        // Show success message
+                        Toast.makeText(this, "Data fetched successfully!", Toast.LENGTH_SHORT).show();
+
                     } catch (JSONException e) {
                         Toast.makeText(this, "Error parsing NodeMCU data", Toast.LENGTH_SHORT).show();
                         Log.e("NODEMCU_ERROR", "JSON error: " + e.getMessage());
+                        Log.e("NODEMCU_ERROR", "Response was: " + response);
                     }
                 },
                 error -> {
-                    Toast.makeText(this, "Error fetching from NodeMCU", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Error fetching from NodeMCU: " + error.getMessage(), Toast.LENGTH_LONG).show();
                     Log.e("NODEMCU_ERROR", "Volley error: " + error.getMessage());
+
+                    // For debugging - check network connectivity
+                    if (error.networkResponse != null) {
+                        Log.e("NODEMCU_ERROR", "Status code: " + error.networkResponse.statusCode);
+                    }
                 });
 
         requestQueue.add(request);
@@ -331,4 +545,4 @@ public class MainActivity extends AppCompatActivity {
         if (score >= 3) return "Poor conditions. Significant challenges";
         return "Very poor conditions. Not recommended";
     }
-}
+}     

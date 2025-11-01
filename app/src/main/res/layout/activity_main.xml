@@ -37,7 +37,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="“If only we could replace every gun with a telescope.”"
+                android:text="Measure the sky. Master the shot."
                 android:textSize="18sp"
                 android:textColor="#FFD700"
                 android:layout_gravity="center"
@@ -51,6 +51,34 @@
                 android:shadowRadius="2"
                 android:layout_marginHorizontal="20dp"
                 android:gravity="center"/>
+
+            <!-- UPCOMING EVENTS BUTTON -->
+            <Button
+                android:id="@+id/eventsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📅 Upcoming Astronomy Events"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/white_border"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:onClick="showEventsDropdown" />
+
+            <!-- FORECAST BUTTON - NEW -->
+            <Button
+                android:id="@+id/forecastButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔭 Find Best Observation Times"
+                android:textSize="16sp"
+                android:padding="12dp"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/white_border"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:onClick="getCloudForecast" />
 
             <!-- Environment Data Section -->
             <LinearLayout
@@ -386,7 +414,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Amaan Khan\nVinit Tarase\nMaaz Khan\nAzeem Patel"
+            android:text="Amaan Khan\nSiddhi Nagvekar\nKashish Gupta\nSakshi Jha"
             android:textSize="14sp"
             android:textColor="#FFD700"
             android:gravity="center"

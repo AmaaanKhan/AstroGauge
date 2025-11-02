@@ -1,9 +1,9 @@
 package com.example.astrogauge;
 
-import android.Manifest; ----
+import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.os.Bundle;   
+import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -13,6 +13,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import android.widget.LinearLayout;
 import androidx.core.content.ContextCompat;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -43,6 +44,11 @@ public class MainActivity extends AppCompatActivity {
     private TextView whyLightText, whyLightExplanation;
     private TextView scoreResult, whyScoreText, whyScoreExplanation;
     private EditText lensInput;
+    private Button getMoonPhaseButton;
+    private TextView moonPhaseIcon, moonPhaseName, moonIllumination;
+    private TextView moonriseTime, moonsetTime, moonObservationQuality;
+    private LinearLayout moonPhaseDisplay;
+    private TextView whyMoonText, whyMoonExplanation;
 
     // Location/API
     private FusedLocationProviderClient fusedLocationClient;
@@ -53,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean hasLensData = false;
     private boolean hasTempHumidityData = false;
     private boolean hasLightData = false;
+    private boolean hasMoonData = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,6 +99,16 @@ public class MainActivity extends AppCompatActivity {
         scoreResult = findViewById(R.id.scoreResult);
         whyScoreText = findViewById(R.id.whyScoreText);
         whyScoreExplanation = findViewById(R.id.whyScoreExplanation);
+        getMoonPhaseButton = findViewById(R.id.getMoonPhaseButton);
+        moonPhaseIcon = findViewById(R.id.moonPhaseIcon);
+        moonPhaseName = findViewById(R.id.moonPhaseName);
+        moonIllumination = findViewById(R.id.moonIllumination);
+        moonriseTime = findViewById(R.id.moonriseTime);
+        moonsetTime = findViewById(R.id.moonsetTime);
+        moonObservationQuality = findViewById(R.id.moonObservationQuality);
+        moonPhaseDisplay = findViewById(R.id.moonPhaseDisplay);
+        whyMoonText = findViewById(R.id.whyMoonText);
+        whyMoonExplanation = findViewById(R.id.whyMoonExplanation);
     }
 
     private void setClickListeners() {
@@ -105,6 +122,8 @@ public class MainActivity extends AppCompatActivity {
         fetchTempHumidityButton.setOnClickListener(v -> fetchNodeMCUData("temp_humidity"));
         fetchLightButton.setOnClickListener(v -> fetchNodeMCUData("light"));
         calculateScoreButton.setOnClickListener(v -> calculateObservationScore());
+        getMoonPhaseButton.setOnClickListener(v -> getMoonPhaseData());
+        whyMoonText.setOnClickListener(v -> toggleVisibility(whyMoonExplanation));
     }
 
     private void toggleVisibility(View view) {
@@ -243,7 +262,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkAllParametersAvailable() {
-        calculateScoreButton.setEnabled(hasCloudData && hasLensData && hasTempHumidityData && hasLightData);
+        calculateScoreButton.setEnabled(hasCloudData && hasLensData &&
+                hasTempHumidityData && hasLightData && hasMoonData);
     }
 
     private void calculateObservationScore() {
@@ -330,5 +350,26 @@ public class MainActivity extends AppCompatActivity {
         if (score >= 5) return "Moderate conditions. Some limitations";
         if (score >= 3) return "Poor conditions. Significant challenges";
         return "Very poor conditions. Not recommended";
+    }
+
+    private void getMoonPhaseData() {
+        // Get current moon phase
+        MoonPhaseCalculator.MoonPhaseInfo phaseInfo = MoonPhaseCalculator.getCurrentMoonPhase();
+
+        // Get moon rise/set times
+        MoonPhaseCalculator.MoonTimes moonTimes = MoonPhaseCalculator.getMoonTimes(MUMBAI_LAT, MUMBAI_LON);
+
+        // Update UI
+        moonPhaseIcon.setText(phaseInfo.phaseIcon);
+        moonPhaseName.setText(phaseInfo.phaseName);
+        moonIllumination.setText(String.format("%.1f%% Illuminated", phaseInfo.illumination));
+        moonriseTime.setText(moonTimes.moonrise);
+        moonsetTime.setText(moonTimes.moonset);
+        moonObservationQuality.setText(phaseInfo.observationQuality);
+
+        // Show display
+        moonPhaseDisplay.setVisibility(View.VISIBLE);
+
+        Toast.makeText(this, "Moon phase data loaded!", Toast.LENGTH_SHORT).show();
     }
 }

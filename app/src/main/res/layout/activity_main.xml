@@ -38,7 +38,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="If only we could replace every gun with a telescope."
+                android:text="Measure the sky.Master the shot☄️."
                 android:textSize="13sp"
                 android:textColor="#9CA3AF"
                 android:paddingTop="6dp"
@@ -1073,7 +1073,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Amaan Khan · Vinit Tarase · Maaz Khan · Azeem Patel"
+                android:text="Amaan Khan · Sakshi Jha · Kashish Gupta · Siddhi Nagvekar"
                 android:textSize="13sp"
                 android:textColor="#A5B4FC"
                 android:gravity="center"

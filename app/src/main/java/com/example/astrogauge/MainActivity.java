@@ -23,8 +23,26 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import org.json.JSONException;
 import org.json.JSONObject;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.view.Gravity;
+import java.util.List;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
+
+    private LinearLayout calendarSummaryCard, calendarViewContainer, calendarGrid;
+    private LinearLayout eventDetailsPanel;
+    private TextView upcomingEventsCount, nextEventPreview, currentMonthYear;
+    private TextView selectedEventTitle, selectedEventDate, selectedEventDescription;
+    private TextView whyCelestialText, whyCelestialExplanation;
+    private Button prevMonthButton, nextMonthButton;
+
+    private int currentDisplayMonth = Calendar.getInstance().get(Calendar.MONTH);
+    private int currentDisplayYear = Calendar.getInstance().get(Calendar.YEAR);
+    private Map<Integer, CelestialEventsCalculator.CelestialEvent> eventsByDay = new HashMap<>();
 
     // Constants
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
@@ -109,6 +127,20 @@ public class MainActivity extends AppCompatActivity {
         moonPhaseDisplay = findViewById(R.id.moonPhaseDisplay);
         whyMoonText = findViewById(R.id.whyMoonText);
         whyMoonExplanation = findViewById(R.id.whyMoonExplanation);
+        calendarSummaryCard = findViewById(R.id.calendarSummaryCard);
+        calendarViewContainer = findViewById(R.id.calendarViewContainer);
+        calendarGrid = findViewById(R.id.calendarGrid);
+        eventDetailsPanel = findViewById(R.id.eventDetailsPanel);
+        upcomingEventsCount = findViewById(R.id.upcomingEventsCount);
+        nextEventPreview = findViewById(R.id.nextEventPreview);
+        currentMonthYear = findViewById(R.id.currentMonthYear);
+        selectedEventTitle = findViewById(R.id.selectedEventTitle);
+        selectedEventDate = findViewById(R.id.selectedEventDate);
+        selectedEventDescription = findViewById(R.id.selectedEventDescription);
+        whyCelestialText = findViewById(R.id.whyCelestialText);
+        whyCelestialExplanation = findViewById(R.id.whyCelestialExplanation);
+        prevMonthButton = findViewById(R.id.prevMonthButton);
+        nextMonthButton = findViewById(R.id.nextMonthButton);
     }
 
     private void setClickListeners() {
@@ -124,6 +156,10 @@ public class MainActivity extends AppCompatActivity {
         calculateScoreButton.setOnClickListener(v -> calculateObservationScore());
         getMoonPhaseButton.setOnClickListener(v -> getMoonPhaseData());
         whyMoonText.setOnClickListener(v -> toggleVisibility(whyMoonExplanation));
+        calendarSummaryCard.setOnClickListener(v -> toggleCalendarView());
+        prevMonthButton.setOnClickListener(v -> changeMonth(-1));
+        nextMonthButton.setOnClickListener(v -> changeMonth(1));
+        whyCelestialText.setOnClickListener(v -> toggleVisibility(whyCelestialExplanation));
     }
 
     private void toggleVisibility(View view) {
@@ -371,5 +407,206 @@ public class MainActivity extends AppCompatActivity {
         moonPhaseDisplay.setVisibility(View.VISIBLE);
 
         Toast.makeText(this, "Moon phase data loaded!", Toast.LENGTH_SHORT).show();
+    }
+    private void toggleCalendarView() {
+        if (calendarViewContainer.getVisibility() == View.GONE) {
+            calendarViewContainer.setVisibility(View.VISIBLE);
+            loadCalendarSummary();
+            displayCalendar();
+        } else {
+            calendarViewContainer.setVisibility(View.GONE);
+        }
+    }
+
+    private void loadCalendarSummary() {
+        List<com.example.astrogauge.CelestialEventsCalculator.CelestialEvent> allEvents =
+                com.example.astrogauge.CelestialEventsCalculator.getUpcomingEvents2025();
+
+        // Count remaining events
+        Calendar now = Calendar.getInstance();
+        int currentMonth = now.get(Calendar.MONTH) + 1;
+        int currentDay = now.get(Calendar.DAY_OF_MONTH);
+
+        int remainingEvents = 0;
+        for (CelestialEventsCalculator.CelestialEvent event : allEvents) {
+            if (event.month > currentMonth ||
+                    (event.month == currentMonth && event.day >= currentDay)) {
+                remainingEvents++;
+            }
+        }
+
+        upcomingEventsCount.setText(remainingEvents + " Events");
+
+        // Get next event
+        CelestialEventsCalculator.CelestialEvent nextEvent =
+                CelestialEventsCalculator.getNextUpcomingEvent();
+        nextEventPreview.setText("Next: " + nextEvent.title + " " + nextEvent.icon);
+    }
+
+    private void displayCalendar() {
+        // Clear previous calendar
+        calendarGrid.removeAllViews();
+        eventsByDay.clear();
+
+        // Get events for this year
+        List<CelestialEventsCalculator.CelestialEvent> allEvents =
+                CelestialEventsCalculator.getUpcomingEvents2025();
+
+        // Map events to days for current month
+        for (CelestialEventsCalculator.CelestialEvent event : allEvents) {
+            if (event.month == currentDisplayMonth + 1) {
+                eventsByDay.put(event.day, event);
+            }
+        }
+
+        // Update month/year display
+        String[] monthNames = {"January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"};
+        currentMonthYear.setText(monthNames[currentDisplayMonth] + " " + currentDisplayYear);
+
+        // Calculate calendar layout
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(currentDisplayYear, currentDisplayMonth, 1);
+
+        int daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
+        int firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1; // 0 = Sunday
+
+        Calendar today = Calendar.getInstance();
+        int todayDay = today.get(Calendar.DAY_OF_MONTH);
+        int todayMonth = today.get(Calendar.MONTH);
+        int todayYear = today.get(Calendar.YEAR);
+
+        // Create calendar grid
+        LinearLayout weekRow = null;
+        int dayCounter = 0;
+
+        // Add empty cells for days before month starts
+        for (int i = 0; i < firstDayOfWeek; i++) {
+            if (weekRow == null) {
+                weekRow = createWeekRow();
+            }
+            weekRow.addView(createEmptyDayCell());
+            dayCounter++;
+        }
+
+        // Add days of month
+        for (int day = 1; day <= daysInMonth; day++) {
+            if (weekRow == null || dayCounter % 7 == 0) {
+                if (weekRow != null) {
+                    calendarGrid.addView(weekRow);
+                }
+                weekRow = createWeekRow();
+            }
+
+            boolean isToday = (day == todayDay && currentDisplayMonth == todayMonth &&
+                    currentDisplayYear == todayYear);
+            boolean hasEvent = eventsByDay.containsKey(day);
+
+            weekRow.addView(createDayCell(day, isToday, hasEvent));
+            dayCounter++;
+        }
+
+        // Fill remaining cells in last row
+        while (dayCounter % 7 != 0) {
+            weekRow.addView(createEmptyDayCell());
+            dayCounter++;
+        }
+
+        if (weekRow != null) {
+            calendarGrid.addView(weekRow);
+        }
+    }
+
+    private LinearLayout createWeekRow() {
+        LinearLayout row = new LinearLayout(this);
+        row.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        return row;
+    }
+
+    private TextView createDayCell(int day, boolean isToday, boolean hasEvent) {
+        TextView dayCell = new TextView(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0,
+                (int) (50 * getResources().getDisplayMetrics().density),
+                1.0f
+        );
+        params.setMargins(2, 2, 2, 2);
+        dayCell.setLayoutParams(params);
+        dayCell.setText(String.valueOf(day));
+        dayCell.setTextSize(14);
+        dayCell.setGravity(Gravity.CENTER);
+        dayCell.setClickable(true);
+        dayCell.setFocusable(true);
+
+        // Style based on state
+        if (hasEvent) {
+            dayCell.setBackgroundColor(0xFF4A90E2); // Blue for events
+            dayCell.setTextColor(0xFFFFFFFF); // White text
+            dayCell.setTypeface(null, Typeface.BOLD);
+
+            // Add click listener for event days
+            final int eventDay = day;
+            dayCell.setOnClickListener(v -> showEventDetails(eventDay));
+        } else if (isToday) {
+            dayCell.setBackgroundColor(0x334A90E2); // Transparent blue
+            dayCell.setTextColor(0xFF64B5F6); // Light blue text
+            dayCell.setTypeface(null, Typeface.BOLD);
+        } else {
+            dayCell.setBackgroundColor(0x1AFFFFFF); // Very transparent white
+            dayCell.setTextColor(0xFFE0E7FF); // Light text
+        }
+
+        return dayCell;
+    }
+
+    private TextView createEmptyDayCell() {
+        TextView emptyCell = new TextView(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0,
+                (int) (50 * getResources().getDisplayMetrics().density),
+                1.0f
+        );
+        params.setMargins(2, 2, 2, 2);
+        emptyCell.setLayoutParams(params);
+        emptyCell.setBackgroundColor(0x0AFFFFFF); // Almost transparent
+        return emptyCell;
+    }
+
+    private void showEventDetails(int day) {
+        CelestialEventsCalculator.CelestialEvent event = eventsByDay.get(day);
+
+        if (event != null) {
+            selectedEventTitle.setText(event.icon + " " + event.title);
+            selectedEventDate.setText(event.date);
+            selectedEventDescription.setText(event.description);
+            eventDetailsPanel.setVisibility(View.VISIBLE);
+
+            // Scroll to show event details
+            final int scrollDelay = 100;
+            eventDetailsPanel.postDelayed(() -> {
+                // Smooth scroll not available in LinearLayout, but visibility change helps
+            }, scrollDelay);
+        }
+    }
+
+    private void changeMonth(int direction) {
+        currentDisplayMonth += direction;
+
+        if (currentDisplayMonth < 0) {
+            currentDisplayMonth = 11;
+            currentDisplayYear--;
+        } else if (currentDisplayMonth > 11) {
+            currentDisplayMonth = 0;
+            currentDisplayYear++;
+        }
+
+        // Hide event details when changing months
+        eventDetailsPanel.setVisibility(View.GONE);
+
+        displayCalendar();
     }
 }

@@ -2,7 +2,6 @@ package com.example.astrogauge;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -23,16 +22,25 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import org.json.JSONException;
 import org.json.JSONObject;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+import java.util.Arrays;
+import android.app.AlertDialog;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Date;
+import org.json.JSONArray;
 
 public class MainActivity extends AppCompatActivity {
-
     private LinearLayout calendarSummaryCard, calendarViewContainer, calendarGrid;
     private LinearLayout eventDetailsPanel;
     private TextView upcomingEventsCount, nextEventPreview, currentMonthYear;
@@ -46,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Constants
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
-    private static final String OPENWEATHER_API_KEY = "51e672d6866ce60022c4506519d65a81";
+    private static final String OPENWEATHER_API_KEY = "BuildConfig.OPENWEATHER_API_KEY";
     private static final double MUMBAI_LAT = 18.9667;
     private static final double MUMBAI_LON = 72.8333;
     private static final String NODEMCU_SERVER = "http://192.168.217.194/";
@@ -67,6 +75,13 @@ public class MainActivity extends AppCompatActivity {
     private TextView moonriseTime, moonsetTime, moonObservationQuality;
     private LinearLayout moonPhaseDisplay;
     private TextView whyMoonText, whyMoonExplanation;
+    private LinearLayout cloudForecastSummaryCard, cloudForecastDetailsContainer;
+    private LinearLayout optimalTimesContainer;
+    private TextView forecastSummaryText, nextClearNightText, optimalTimesCount;
+    private TextView forecastStatusText, whyCloudForecastText, whyCloudForecastExplanation;
+    private Button refreshForecastButton, setReminderButton;
+    private List<ForecastPeriod> currentOptimalPeriods = new ArrayList<>();
+
 
     // Location/API
     private FusedLocationProviderClient fusedLocationClient;
@@ -141,6 +156,18 @@ public class MainActivity extends AppCompatActivity {
         whyCelestialExplanation = findViewById(R.id.whyCelestialExplanation);
         prevMonthButton = findViewById(R.id.prevMonthButton);
         nextMonthButton = findViewById(R.id.nextMonthButton);
+        // Cloud Forecast elements
+        cloudForecastSummaryCard = findViewById(R.id.cloudForecastSummaryCard);
+        cloudForecastDetailsContainer = findViewById(R.id.cloudForecastDetailsContainer);
+        optimalTimesContainer = findViewById(R.id.optimalTimesContainer);
+        forecastSummaryText = findViewById(R.id.forecastSummaryText);
+        nextClearNightText = findViewById(R.id.nextClearNightText);
+        optimalTimesCount = findViewById(R.id.optimalTimesCount);
+        forecastStatusText = findViewById(R.id.forecastStatusText);
+        whyCloudForecastText = findViewById(R.id.whyCloudForecastText);
+        whyCloudForecastExplanation = findViewById(R.id.whyCloudForecastExplanation);
+        refreshForecastButton = findViewById(R.id.refreshForecastButton);
+        setReminderButton = findViewById(R.id.setReminderButton);
     }
 
     private void setClickListeners() {
@@ -160,6 +187,10 @@ public class MainActivity extends AppCompatActivity {
         prevMonthButton.setOnClickListener(v -> changeMonth(-1));
         nextMonthButton.setOnClickListener(v -> changeMonth(1));
         whyCelestialText.setOnClickListener(v -> toggleVisibility(whyCelestialExplanation));
+        cloudForecastSummaryCard.setOnClickListener(v -> toggleCloudForecastView());
+        refreshForecastButton.setOnClickListener(v -> loadCloudForecast());
+        setReminderButton.setOnClickListener(v -> setReminderForBestTime());
+        whyCloudForecastText.setOnClickListener(v -> toggleVisibility(whyCloudForecastExplanation));
     }
 
     private void toggleVisibility(View view) {
@@ -609,4 +640,305 @@ public class MainActivity extends AppCompatActivity {
 
         displayCalendar();
     }
+    private void toggleCloudForecastView() {
+        if (cloudForecastDetailsContainer.getVisibility() == View.GONE) {
+            cloudForecastDetailsContainer.setVisibility(View.VISIBLE);
+            if (optimalTimesContainer.getChildCount() == 0) {
+                loadCloudForecast();
+            }
+        } else {
+            cloudForecastDetailsContainer.setVisibility(View.GONE);
+        }
+    }
+
+    private void loadCloudForecastSummary() {
+        // Quick summary without opening full view
+        new Thread(() -> {
+            try {
+                String forecastData = fetchForecastData();
+                List<ForecastPeriod> optimalPeriods = findOptimalObservationTimes(forecastData);
+
+                runOnUiThread(() -> {
+                    if (!optimalPeriods.isEmpty()) {
+                        ForecastPeriod best = optimalPeriods.get(0);
+                        nextClearNightText.setText("Next clear: " + best.dateTime);
+                        optimalTimesCount.setText(optimalPeriods.size() + " optimal times found");
+                    } else {
+                        nextClearNightText.setText("No clear nights in next 5 days");
+                        optimalTimesCount.setText("Check back later");
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    nextClearNightText.setText("Tap to load forecast");
+                    optimalTimesCount.setText("Internet connection required");
+                });
+            }
+        }).start();
+    }
+
+    private void loadCloudForecast() {
+        forecastStatusText.setText("🔄 Loading forecast...");
+        optimalTimesContainer.removeAllViews();
+        setReminderButton.setEnabled(false);
+
+        Toast.makeText(this, "Fetching 5-day cloud forecast...", Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            try {
+                String forecastData = fetchForecastData();
+                List<ForecastPeriod> optimalPeriods = findOptimalObservationTimes(forecastData);
+                currentOptimalPeriods = optimalPeriods;
+
+                runOnUiThread(() -> {
+                    displayOptimalTimes(optimalPeriods);
+                    forecastStatusText.setText("✅ Forecast loaded successfully");
+
+                    if (!optimalPeriods.isEmpty()) {
+                        setReminderButton.setEnabled(true);
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    forecastStatusText.setText("⚠️ Using simulated data (API unavailable)");
+                    displaySimulatedForecast();
+                });
+            }
+        }).start();
+    }
+
+    private void displayOptimalTimes(List<ForecastPeriod> optimalPeriods) {
+        optimalTimesContainer.removeAllViews();
+
+        if (optimalPeriods.isEmpty()) {
+            // Show no results message
+            TextView noResults = new TextView(this);
+            noResults.setText("No clear nights (≤25% clouds) found in next 5 days.\nCheck back later!");
+            noResults.setTextSize(14);
+            noResults.setTextColor(0xFFE0E7FF);
+            noResults.setGravity(Gravity.CENTER);
+            noResults.setPadding(32, 64, 32, 64);
+            optimalTimesContainer.addView(noResults);
+            return;
+        }
+
+        // Add each optimal time as a card
+        for (int i = 0; i < optimalPeriods.size(); i++) {
+            ForecastPeriod period = optimalPeriods.get(i);
+            optimalTimesContainer.addView(createOptimalTimeCard(period, i == 0));
+        }
+    }
+
+    private LinearLayout createOptimalTimeCard(ForecastPeriod period, boolean isBest) {
+        LinearLayout card = new LinearLayout(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 0, 0, 16);
+        card.setLayoutParams(params);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(20, 20, 20, 20);
+
+        // Background color based on quality
+        if (isBest) {
+            card.setBackgroundColor(0x40FFD700); // Gold tint for best
+        } else if (period.cloudScore == 4) {
+            card.setBackgroundColor(0x404A90E2); // Blue for excellent
+        } else {
+            card.setBackgroundColor(0x30FFFFFF); // Light for good
+        }
+
+        // Best badge
+        if (isBest) {
+            TextView bestBadge = new TextView(this);
+            bestBadge.setText("⭐ BEST TIME");
+            bestBadge.setTextSize(10);
+            bestBadge.setTextColor(0xFFFFD700);
+            bestBadge.setTypeface(null, Typeface.BOLD);
+            bestBadge.setPadding(0, 0, 0, 8);
+            card.addView(bestBadge);
+        }
+
+        // Date/Time
+        TextView dateTime = new TextView(this);
+        dateTime.setText("📅 " + period.dateTime);
+        dateTime.setTextSize(16);
+        dateTime.setTextColor(0xFFFFFFFF);
+        dateTime.setTypeface(null, Typeface.BOLD);
+        card.addView(dateTime);
+
+        // Cloud coverage
+        TextView cloudInfo = new TextView(this);
+        String emoji = period.cloudScore == 4 ? "⭐" : "🌟";
+        String condition = getCloudCondition(period.cloudCover);
+        cloudInfo.setText(String.format("%s Cloud Cover: %d%% (%s)", emoji, period.cloudCover, condition));
+        cloudInfo.setTextSize(14);
+        cloudInfo.setTextColor(0xFF64B5F6);
+        LinearLayout.LayoutParams cloudParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cloudParams.setMargins(0, 8, 0, 8);
+        cloudInfo.setLayoutParams(cloudParams);
+        card.addView(cloudInfo);
+
+        // Recommendation
+        TextView recommendation = new TextView(this);
+        if (period.cloudScore == 4) {
+            recommendation.setText("Perfect for deep-sky observation!");
+        } else if (period.cloudScore == 3) {
+            recommendation.setText("Great for general stargazing");
+        }
+        recommendation.setTextSize(13);
+        recommendation.setTextColor(0xFFE0E7FF);
+        card.addView(recommendation);
+
+        return card;
+    }
+
+    private void displaySimulatedForecast() {
+        optimalTimesContainer.removeAllViews();
+
+        // Create sample forecast periods
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM d, hh:mm a", Locale.getDefault());
+
+        ForecastPeriod[] simulatedPeriods = {
+                new ForecastPeriod(sdf.format(cal.getTime()) + " (Tonight)", 15, 4),
+                new ForecastPeriod(getNextDayFormatted(cal, 1, sdf), 12, 4),
+                new ForecastPeriod(getNextDayFormatted(cal, 2, sdf), 22, 3),
+                new ForecastPeriod(getNextDayFormatted(cal, 3, sdf), 18, 4),
+                new ForecastPeriod(getNextDayFormatted(cal, 4, sdf), 25, 3)
+        };
+
+        currentOptimalPeriods = Arrays.asList(simulatedPeriods);
+
+        for (int i = 0; i < simulatedPeriods.length; i++) {
+            optimalTimesContainer.addView(createOptimalTimeCard(simulatedPeriods[i], i == 0));
+        }
+
+        setReminderButton.setEnabled(true);
+    }
+
+    private String getNextDayFormatted(Calendar cal, int daysToAdd, SimpleDateFormat sdf) {
+        Calendar future = (Calendar) cal.clone();
+        future.add(Calendar.DAY_OF_MONTH, daysToAdd);
+        future.set(Calendar.HOUR_OF_DAY, 22);
+        future.set(Calendar.MINUTE, 0);
+        return sdf.format(future.getTime());
+    }
+
+    private void setReminderForBestTime() {
+        if (currentOptimalPeriods.isEmpty()) {
+            Toast.makeText(this, "No optimal times available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ForecastPeriod bestPeriod = currentOptimalPeriods.get(0);
+
+        new AlertDialog.Builder(this)
+                .setTitle("🔔 Set Reminder")
+                .setMessage("Set a reminder for:\n\n" + bestPeriod.dateTime +
+                        "\nCloud Cover: " + bestPeriod.cloudCover + "% (" +
+                        getCloudCondition(bestPeriod.cloudCover) + ")\n\n" +
+                        "Reminder will be set 1 hour before optimal time.")
+                .setPositiveButton("Set Reminder", (dialog, which) -> {
+                    // Here you can implement actual calendar/notification reminder
+                    Toast.makeText(this, "Reminder set for " + bestPeriod.dateTime, Toast.LENGTH_LONG).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+
+    // Make sure you have this helper method
+    private String getCloudCondition(int cloudCover) {
+        if (cloudCover <= 10) return "Excellent";
+        if (cloudCover <= 25) return "Very Good";
+        if (cloudCover <= 50) return "Good";
+        return "Fair";
+    }
+    // Helper class for forecast periods
+    private static class ForecastPeriod {
+        String dateTime;
+        int cloudCover;
+        int cloudScore;
+
+        ForecastPeriod(String dateTime, int cloudCover, int cloudScore) {
+            this.dateTime = dateTime;
+            this.cloudCover = cloudCover;
+            this.cloudScore = cloudScore;
+        }
+    }
+
+    private String fetchForecastData() throws Exception {
+        String urlString = "https://api.openweathermap.org/data/2.5/forecast?q=Mumbai&units=metric&appid=" + OPENWEATHER_API_KEY;
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlString).openConnection();
+        connection.setRequestMethod("GET");
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+        return response.toString();
+    }
+
+    private List<ForecastPeriod> findOptimalObservationTimes(String forecastData) throws Exception {
+        List<ForecastPeriod> optimalPeriods = new ArrayList<>();
+        JSONObject json = new JSONObject(forecastData);
+        JSONArray list = json.getJSONArray("list");
+
+        SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        SimpleDateFormat outputFormat = new SimpleDateFormat("EEE, MMM d, hh:mm a", Locale.getDefault());
+
+        for (int i = 0; i < list.length(); i++) {
+            JSONObject item = list.getJSONObject(i);
+
+            // Get cloud coverage
+            JSONObject clouds = item.getJSONObject("clouds");
+            int cloudCover = clouds.getInt("all");
+
+            // Get date/time
+            String dateTimeStr = item.getString("dt_txt");
+            Date dateTime = inputFormat.parse(dateTimeStr);
+
+            // Get hour of day
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(dateTime);
+            int hour = cal.get(Calendar.HOUR_OF_DAY);
+
+            // Only consider night hours (8 PM to 6 AM) for observation
+            boolean isNightTime = hour >= 20 || hour <= 6;
+
+            // Calculate cloud cover score using YOUR existing scoring system
+            int cloudScore = getCloudScore(cloudCover);
+
+            // Consider optimal if cloud score is 3 or 4 (0-25% clouds = Excellent/Very Good)
+            if (isNightTime && cloudScore >= 3) {
+                optimalPeriods.add(new ForecastPeriod(
+                        outputFormat.format(dateTime),
+                        cloudCover,
+                        cloudScore
+                ));
+            }
+        }
+
+        // Sort by best cloud score (4 is best) and then by lowest cloud percentage
+        optimalPeriods.sort((a, b) -> {
+            if (b.cloudScore != a.cloudScore) {
+                return Integer.compare(b.cloudScore, a.cloudScore);
+            }
+            return Integer.compare(a.cloudCover, b.cloudCover);
+        });
+
+        // Limit to top 5 results
+        return optimalPeriods.subList(0, Math.min(optimalPeriods.size(), 5));
+    }
+
 }

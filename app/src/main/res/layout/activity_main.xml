@@ -47,6 +47,266 @@
                 android:lineSpacingExtra="3dp" />
         </LinearLayout>
 
+        <!-- Cloud Forecast Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#CC1E2742"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:background="@drawable/card_glass_effect">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingBottom="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="☁️ Cloud Forecast"
+                        android:textSize="20sp"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/status_indicator" />
+                </LinearLayout>
+
+                <!-- Cloud Summary Card (Collapsed View) -->
+                <LinearLayout
+                    android:id="@+id/cloudForecastSummaryCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:background="@drawable/card_premium"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <!-- Cloud Icon and Stats -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <!-- Large Cloud Icon -->
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:text="☁️"
+                            android:textSize="60sp"
+                            android:gravity="center" />
+
+                        <!-- Forecast Summary -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:paddingStart="20dp">
+
+                            <TextView
+                                android:id="@+id/forecastSummaryText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="5-Day Forecast"
+                                android:textSize="16sp"
+                                android:textColor="#A5B4FC"
+                                android:paddingBottom="4dp" />
+
+                            <TextView
+                                android:id="@+id/nextClearNightText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Loading..."
+                                android:textSize="14sp"
+                                android:textColor="#64B5F6"
+                                android:paddingTop="4dp" />
+
+                            <TextView
+                                android:id="@+id/optimalTimesCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Tap to view forecast"
+                                android:textSize="12sp"
+                                android:textColor="#FFD700"
+                                android:paddingTop="8dp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Tap to View Indicator -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="👆 Tap to view detailed forecast"
+                        android:textSize="13sp"
+                        android:textColor="#8A92A6"
+                        android:gravity="center"
+                        android:paddingTop="16dp"
+                        android:textStyle="italic" />
+                </LinearLayout>
+
+                <!-- Detailed Forecast View (Initially Hidden) -->
+                <LinearLayout
+                    android:id="@+id/cloudForecastDetailsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:paddingTop="16dp">
+
+                    <!-- Status Bar -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="12dp"
+                        android:background="@drawable/info_box"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:id="@+id/forecastStatusText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="🔄 Loading forecast..."
+                            android:textSize="13sp"
+                            android:textColor="#E0E7FF"
+                            android:gravity="center" />
+                    </LinearLayout>
+
+                    <!-- Optimal Times List -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BEST OBSERVATION TIMES"
+                        android:textSize="11sp"
+                        android:textColor="#A5B4FC"
+                        android:letterSpacing="0.1"
+                        android:paddingBottom="12dp" />
+
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="300dp"
+                        android:fillViewport="false">
+
+                        <LinearLayout
+                            android:id="@+id/optimalTimesContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <!-- Optimal time cards will be added dynamically here -->
+
+                        </LinearLayout>
+                    </ScrollView>
+
+                    <!-- Action Buttons -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingTop="16dp"
+                        android:gravity="center">
+
+                        <Button
+                            android:id="@+id/refreshForecastButton"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_weight="1"
+                            android:text="🔄 Refresh"
+                            android:textColor="#FFFFFF"
+                            android:textAllCaps="false"
+                            android:textSize="14sp"
+                            android:background="@drawable/button_glass"
+                            android:layout_marginEnd="8dp" />
+
+                        <Button
+                            android:id="@+id/setReminderButton"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_weight="1"
+                            android:text="🔔 Set Reminder"
+                            android:textColor="#FFFFFF"
+                            android:textAllCaps="false"
+                            android:textSize="14sp"
+                            android:background="@drawable/button_premium"
+                            android:layout_marginStart="8dp"
+                            android:enabled="false" />
+                    </LinearLayout>
+
+                    <!-- Info Message -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:background="@drawable/info_box"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="💡 PRO TIP"
+                            android:textSize="11sp"
+                            android:textColor="#A5B4FC"
+                            android:letterSpacing="0.1"
+                            android:paddingBottom="8dp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Use your hardware sensors at these optimal times to verify local temperature, humidity, and light pollution for perfect observation conditions!"
+                            android:textSize="12sp"
+                            android:textColor="#E0E7FF"
+                            android:lineSpacingExtra="3dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/whyCloudForecastText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💡 Why check cloud forecast?"
+                    android:textSize="13sp"
+                    android:textColor="#A5B4FC"
+                    android:paddingTop="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical" />
+
+                <TextView
+                    android:id="@+id/whyCloudForecastExplanation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cloud coverage is the #1 factor for successful astronomy sessions. Planning ahead helps you choose the best nights for observation, ensuring clear skies and minimal light interference from clouds."
+                    android:textSize="13sp"
+                    android:textColor="#E0E7FF"
+                    android:visibility="gone"
+                    android:padding="14dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/info_box"
+                    android:lineSpacingExtra="4dp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <!-- Moon Phase Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"

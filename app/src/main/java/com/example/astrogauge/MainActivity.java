@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Constants
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
-    private static final String OPENWEATHER_API_KEY = "BuildConfig.OPENWEATHER_API_KEY";
+    private static final String OPENWEATHER_API_KEY = "51e672d6866ce60022c4506519d65a81";
     private static final double MUMBAI_LAT = 18.9667;
     private static final double MUMBAI_LON = 72.8333;
     private static final String NODEMCU_SERVER = "http://192.168.217.194/";
@@ -335,7 +335,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void calculateObservationScore() {
         try {
-            // Get cloud cover score
+            // Get cloud cover score & percent
             String cloudText = cloudCoverResult.getText().toString();
             int cloudPercent = Integer.parseInt(cloudText.split(":")[1].replace("%", "").trim());
             int cloudScore = getCloudScore(cloudPercent);
@@ -358,8 +358,65 @@ public class MainActivity extends AppCompatActivity {
             int lightValue = Integer.parseInt(lightText.split(":")[1].trim());
             int lightScore = getLightScore(lightValue);
 
-            // Calculate final score
-            double finalScore = (cloudScore + lensScore + tempScore + humidityScore + lightScore) * 2.5 / 5;
+            // -----------------------------
+            // Weighted scoring logic
+            // -----------------------------
+            // Weights (sum = 1.0)
+            double wCloud = 0.35;
+            double wLens = 0.20;
+            double wTemp = 0.15;
+            double wHum = 0.15;
+            double wLight = 0.15;
+
+            // Weighted average of 1..4 scores
+            double weighted = cloudScore * wCloud +
+                    lensScore * wLens +
+                    tempScore * wTemp +
+                    humidityScore * wHum +
+                    lightScore * wLight;
+
+            // Map weighted (range 1..4) to 0..10
+            double finalScore = ( (weighted - 1.0) / (4.0 - 1.0) ) * 10.0;
+
+            // -----------------------------
+            // Critical caps & penalties
+            // -----------------------------
+            // Cloud-based caps
+            if (cloudPercent >= 85) {
+                // Very cloudy -> practically unusable: cap to 3/10
+                finalScore = Math.min(finalScore, 3.0);
+            } else if (cloudPercent >= 60) {
+                // Moderately cloudy -> cap to 5/10
+                finalScore = Math.min(finalScore, 5.0);
+            }
+
+            // Extreme humidity -> lowers transparency and equipment risk -> cap further
+            if (humidity >= 90) {
+                finalScore = Math.min(finalScore, 4.0);
+            } else if (humidity >= 80) {
+                finalScore = Math.min(finalScore, 5.0);
+            }
+
+            // Severe light pollution -> limits deep-sky photography
+            if (lightValue >= 950) {
+                finalScore = Math.min(finalScore, 4.0);
+            } else if (lightValue >= 700) {
+                finalScore = Math.min(finalScore, 5.0);
+            }
+
+            // Very poor temperature for equipment or seeing: apply small penalty (10%)
+            if (temperature < 5 || temperature > 35) {
+                finalScore *= 0.9;
+            }
+
+            // If lens is extremely small (very low power), reduce top-end capability
+            if (lensScore == 1) {
+                finalScore = Math.min(finalScore, 6.0); // small telescopes can't get the best possible results
+            }
+
+            // Clamp finalScore to 0..10
+            if (finalScore < 0) finalScore = 0;
+            if (finalScore > 10) finalScore = 10;
 
             // Display result
             scoreResult.setText(String.format("Observation Score: %.1f/10", finalScore));
